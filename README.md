@@ -8,7 +8,7 @@ Hawkes jump-diffusion and Extreme Value Theory pricing and collateral-risk model
 
 **File:** [`ERCOT_LMP_Oracle_EDF_Writeup.docx`](https://docs.google.com/document/d/1fVnq88tNagmZVM5VHRTg2PPQJv8VI80X/edit?usp=sharing&ouid=111928630189653190727&rtpof=true&sd=true)
 **Author:** Gauri Nair · CHRIST (Deemed to be University), Bengaluru
-**Status:** Research prototype, real-data validated (DAM); RTM validation ongoing
+**Status:** Oracle Server prototype, real-data validated (DAM); RTM validation ongoing
 
 ## What this is
 
