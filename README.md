@@ -1,45 +1,55 @@
-# ERCOT-LMP-Pricing-Oracle
-Hawkes jump-diffusion and Extreme Value Theory pricing and collateral-risk model for ERCOT day-ahead LMPs, purpose-built for supplier-side bid sizing and collateral haircuts rather than execution
+# Calibrating Tail Risk for ERCOT Supplier Collateral
 
+**Time-of-day and volatility-filtered VaR for 5-minute and day-ahead LMP exposure**
 
+Gauri Santhosh Nair · CHRIST (Deemed to be University), Bengaluru
 
+This project asks one question: **how much collateral should a supplier hold against ERCOT price exposure?** It does not try to predict the next price. It sizes a 99% Value-at-Risk (VaR99) for a 50 MW position and tests it walk-forward, with no look-ahead, on real ERCOT data.
 
-# ERCOT LMP Pricing Oracle
+> **Status.** The full methodology, parameters and diagnostics are being prepared for a paper and are intentionally not published here. This page reports headline findings only.
 
-**File:** [`ERCOT_LMP_Oracle_EDF_Writeup.docx`](https://docs.google.com/document/d/1fVnq88tNagmZVM5VHRTg2PPQJv8VI80X/edit?usp=sharing&ouid=111928630189653190727&rtpof=true&sd=true)
-**Author:** Gauri Nair · CHRIST (Deemed to be University), Bengaluru
-**Status:** Oracle Server prototype, real-data validated (DAM); RTM validation ongoing
+> **Correction notice.** An earlier version of this work reported a 2.6% day-ahead forecasting edge over persistence. That result came from an implementation error and is **withdrawn**. The corrected model is statistically tied with persistence, and the project is now framed as risk calibration, not price forecasting.
 
-## What this is
+## Headline results
 
-A Hawkes jump-diffusion + Extreme Value Theory (EVT) pricing and collateral-risk model for the ERCOT electricity market. It is built for **supplier-side risk management** — day-ahead bid sizing and collateral haircut estimation — and is explicitly **not** an execution or order-routing system.
+| | Static parametric VaR | Volatility-filtered, time-of-day VaR |
+|---|---|---|
+| Breach rate, all hours (target 1%) | 0.83% | 1.15% |
+| Breach rate, 17:00–22:00 evening ramp | **2.31%** | **1.20%** |
+| Breach severity (mean loss / VaR) | 2.65× | 1.33× |
+| Pinball loss (τ = 0.99) | 18.46 | 7.38 |
+| VaR as share of notional | 49.7% | 29.3% |
 
-For a given ERCOT settlement point, the oracle produces:
-- a fair-value LMP estimate for the next pricing interval
-- a confidence interval around that estimate
-- a collateral haircut combining a jump-diffusion VaR with a separate EVT tail-risk estimate
+Real-time, HB_HOUSTON, 31,119 five-minute walk-forward steps.
 
-## Why it's methodologically non-trivial
+1. **A static VaR looks right and is wrong.** Its aggregate breach rate hides a much higher rate in the evening ramp, where the largest losses occur, and its breaches cluster.
+2. **Conditioning on time of day and current volatility fixes most of it.** The evening breach rate moves close to target, breach severity roughly halves, and the result holds across the alternative settings tested.
+3. **Day-ahead, no method beats posting full notional** at 99% while keeping breaches near target, across 4,275 causal steps at DA_NORTH.
+4. **No point-forecast edge** over persistence in either market.
+5. **Hawkes self-excitation is not supported** as a risk driver on the real data tested, beyond what time of day already explains.
 
-Standard Hawkes/jump-diffusion models assume log-returns, which are undefined at zero or negative prices — a condition equities rarely hit but electricity prices do regularly. Four years of real ERCOT DAM_NORTH data contain 18 non-positive hourly observations, which silently broke the log-return formulation. The model was rebuilt in arithmetic (price-difference) terms, consistent with established electricity-pricing literature (Cartea & Figueroa, 2005).
+## Approach
 
-## Headline results (real data, not synthetic)
+Loss is the one-sided drop a seller bears on a fixed 50 MW position. Several VaR constructions are scored against each other on identical steps, using standard coverage and independence tests, pinball loss, capital efficiency and breach severity. All calibration is walk-forward: nothing fitted on a test step is used to score it. Methods, parameters, window lengths and diagnostics are withheld pending the paper.
 
-| Test | Result |
-|---|---|
-| DAM walk-forward backtest | 4,274 out-of-sample hourly steps, 2024-10-31 to 2025-04-27 |
-| Model MAE vs naive persistence | 2.6% edge ($6.089 vs $6.2545) |
-| 95%-target CI coverage | 99.9% (conservative) |
-| 1%-target VaR99 exceedance | 0.0% (conservative) |
-| RTM (5-min, 10-day sample) | Inconclusive — no edge over naive persistence yet |
+## Data
 
-The DAM edge was independently re-verified after finding and fixing two calibration bugs; it reproduced at the same 2.6% figure.
+Real ERCOT data throughout: 5-minute real-time LMP at HB_HOUSTON, and hourly day-ahead LMP with load, wind and solar at DA_NORTH. Results are labelled real or synthetic and never mixed.
 
-## What's honestly unproven
+## Limitations
 
-- The self-exciting Hawkes component has not calibrated on real data at any resolution tested — real history pulled so far is short of the ~45–90+ days needed. Jump-diffusion and EVT currently carry the model's real predictive value.
-- RTM (5-minute) results are preliminary and should not be read as validating short-horizon use.
-- Validated on two settlement points only (DA_NORTH, HB_HOUSTON); other nodes are untested.
-- Several parameters (Hawkes decay range, SCED-RTD trust weight, EIA-shock threshold) are reasoned defaults, not fitted.
+1. One node and one season per horizon.
+2. A fixed one-sided 50 MW position held one step; buyer-side risk, multi-step holding and ERCOT's actual collateral rules are not modelled.
+3. Only the 99% level is tested; expected-shortfall haircuts are untested.
+4. Breaches still cluster day-ahead, and coverage tests are optimistic where breaches are not independent.
+5. Some settings were examined after seeing results and are exploratory.
+6. The Hawkes finding is "not supported at current sample sizes", not "disproven".
 
-Full detail, methodology, and the complete limitations list are in the write-up itself.
+## Next steps
+
+More nodes and a longer history, fundamentals-conditioned day-ahead risk, adaptive calibration, and an expected-shortfall haircut.
+
+## Rights
+
+© Gauri Santhosh Nair. All rights reserved. Please do not reproduce or build on the methodology without permission. Contact: gauri.santhoshnair@bscdsmh.christuniversity.in
+
